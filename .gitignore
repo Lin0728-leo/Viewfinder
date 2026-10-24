@@ -1,6 +1,8 @@
 # 密钥/配置：只存在 %APPDATA%\DshShot\config.ini，任何情况下都不进仓库
 config.ini
 *.ini
+# 价目表是公开示例，需要进仓库
+!pricing.ini
 *.key
 *.env
 secrets*
@@ -12,6 +14,9 @@ secrets*
 *.bak-*
 *.pdb
 *.obj
+# 编译产物由 build.ps1 / CI 生成，不再进仓库
+DshShot.dll
+tests/bin/
 
 # 日志与临时文件
 *.log

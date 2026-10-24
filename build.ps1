@@ -139,14 +139,17 @@ Write-Host ("icon ok: {0}x{1}" -f $ico.Width, $ico.Height)
 $ico.Dispose()
 
 # ---------------------------------------------------------------- compile
+$sources = @(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'src') -Filter '*.cs' |
+    Sort-Object Name | ForEach-Object { $_.FullName })
+if ($sources.Count -eq 0) { throw "no sources under src\" }
+
 $cscArgs = @(
     '/nologo', '/target:library', '/platform:anycpu', '/optimize+',
     '/codepage:65001',
     ('/win32icon:' + (Join-Path $PSScriptRoot 'app.ico')),
     ('/out:' + (Join-Path $PSScriptRoot 'DshShot.dll')),
-    '/r:System.dll', '/r:System.Drawing.dll', '/r:System.Windows.Forms.dll', '/r:System.Web.Extensions.dll',
-    (Join-Path $PSScriptRoot 'src\DshShot.cs')
-)
+    '/r:System.dll', '/r:System.Drawing.dll', '/r:System.Windows.Forms.dll', '/r:System.Web.Extensions.dll'
+) + $sources
 & $csc $cscArgs
 if ($LASTEXITCODE -ne 0) { throw "compile failed: $LASTEXITCODE" }
 

@@ -1,0 +1,32 @@
+name: build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build (csc / .NET Framework)
+        shell: powershell
+        run: .\build.ps1
+
+      - name: Run tests
+        shell: powershell
+        run: .\tests\run-tests.ps1
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DshShot
+          if-no-files-found: error
+          path: |
+            DshShot.dll
+            app.ico
+            pricing.ini

@@ -1,14 +1,19 @@
-﻿# DSH 取景器 (DshShot)
+# DSH 取景器 (DshShot)
 
 一键截图 → 自动调 AI 出答案，答案显示在屏幕右侧的悬浮小窗里。
 
+![build](https://github.com/Lin0728-leo/Viewfinder/actions/workflows/build.yml/badge.svg)
+
 ## 下载与安装
 
-不需要安装程序、不需要编译，解压即用：
+不需要安装程序，解压后一次双击即可：
 
 1. 在 GitHub 页面点 **Code → Download ZIP**（或 `git clone`）
 2. 解压到**任意目录**（路径里有空格、中文都可以）
-3. 双击 **`install.cmd`** —— 它会在当前目录生成 `DSH 取景器.lnk` 并启动程序
+3. 双击 **`install.cmd`** —— 首次会自动用系统自带的 C# 编译器生成 `DshShot.dll`（约 1-2 秒），然后生成 `DSH 取景器.lnk` 并启动
+
+> 仓库不再提交编译产物 `DshShot.dll`：它由 `build.ps1` 在本机生成（Win10/11 自带 .NET Framework 4.x，无需装 SDK）。
+> 也可以从 GitHub Actions 的 **build** 产物里直接下载 `DshShot.dll` 放进目录，跳过本机编译。
 
 之后每天用就双击那个 `DSH 取景器.lnk`（带图标、不闪黑框）。换目录或换机器，重新跑一次 `install.cmd` 即可。
 
@@ -36,6 +41,19 @@
 5. 最后手段：关闭智能应用控制（设置 → 隐私和安全性 → Windows 安全中心 → 应用和浏览器控制）。注意**关闭后除非重装系统否则无法再开启**，不建议为了这个工具这么做。
 
 确认成功的标志：双击 `install.cmd` 后，目录里出现 `DSH 取景器.lnk`，并弹出设置窗口。
+
+## 从源码构建与测试
+
+```powershell
+# 编译（生成 app.ico 和 DshShot.dll）
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
+
+# 跑测试（自动编译 DshShot.dll，再编译并运行 tests 下的测试宿主）
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\run-tests.ps1
+```
+
+没有 SDK、没有 NuGet、没有测试框架：`csc.exe` 直接编译 `src\*.cs`，测试是一个自带的控制台程序。
+CI 在 `.github/workflows/build.yml`：每次 push / PR 都在 `windows-latest` 上编译、跑测试，并上传构建产物。
 
 ## 启动
 
@@ -116,6 +134,8 @@ API Key **只存在本机** `%APPDATA%\DshShot\config.ini`，用 Windows DPAPI �
 
 北京时间周一至周五 9:00–12:00、14:00–18:00 为高峰（上表价格），其余时段（含周末）半价。
 
+价目表不再写死在代码里：程序目录下的 `pricing.ini` 可以覆盖任意模型的价格，格式为 `模型名 = 缓存命中价, 未命中价, 输出价`（元/百万 tokens），改完重启生效；文件缺失或格式错误时自动使用内置默认值。
+
 自动作答送的是原分辨率 PNG，一屏约 5000 图像 token（1600 宽 JPEG 时代约 800），单轮成本大致 ¥0.02–0.05；联网核对每次另加 ¥0.005。这些都会累加到上面的「累计」里。
 托盘菜单 →「用量统计（累计 tokens / 费用）」看明细，「重置用量统计」清零。
 
@@ -175,7 +195,7 @@ API Key **只存在本机** `%APPDATA%\DshShot\config.ini`，用 Windows DPAPI �
 | 关闭 / 预览 / 自动点击 | **先用预览**：只在屏幕上画框，不点，确认对得上再开自动 |
 | 目标窗口 | 点一下把当前前台窗口设为目标 |
 | 抓取间隔 | 2 / 3 / 5 / 8 秒。这只是轮询节奏，真正的闸门是「停手 2 秒」 |
-| 点击方式 | 前台（真的移动光标，兼容性最好）/ 后台（给窗口投消息，不动光标） |
+| 点击方式 | **默认后台**（给窗口投消息，不动光标）/ 前台（真的移动光标，兼容性最好；可让点完自动还原光标） |
 | 点击前复检选项文字 | 把要点的框裁出来 OCR 一遍，和选项原文比对，不一致就不点 |
 | 填空题自动粘贴 | 默认关；开了会点中填空框再粘贴答案 |
 
@@ -205,6 +225,9 @@ API Key **只存在本机** `%APPDATA%\DshShot\config.ini`，用 Windows DPAPI �
 | `AutoThinkTie` | 1 | 两次答案冲突时，用思考模式裁决第三次；跟哪一次一致就采用哪一次，仍不一致才跳过 |
 | `AutoWebSearch` | 1 | 裁决还定不下来时，联网搜一次再让模型结合资料作答（每次约 ¥0.005 + 2 次调用） |
 | `NoCompress` | 1 | 不缩放、不转 JPEG，原分辨率 PNG 送模型；设 0 才按 `AutoMaxEdge`/`AutoQuality` 压缩 |
+| `CaptureBackend` | `auto` | 抓屏方式：`auto`（前台用屏幕复制、被遮挡用 PrintWindow）/ `screen` / `printwindow` |
+| `AutoBackend` | `postmessage` | 点击方式：`postmessage`（不动光标）/ `sendinput`（前台鼠标） |
+| `AutoRestoreCursor` | 1 | 前台点击后把光标放回原处 |
 
 都在 `%APPDATA%\DshShot\config.ini` 里，改完重启程序。
 
@@ -227,8 +250,8 @@ API Key **只存在本机** `%APPDATA%\DshShot\config.ini`，用 Windows DPAPI �
 
 ### 两个必须知道的前提
 
-- **目标窗口必须露在最上面**。读屏用的是 `CopyFromScreen`（和 BetterGI 的 BitBlt 后端同一类做法），被别的窗口盖住时拍到的是盖住它的那个窗口。要截被遮挡的窗口得换成 WGC，那是另一套东西。
-- 自动点击默认走「前台」通道，会真的移动你的鼠标；游戏/网页如果启用了防机器人，这种输入可能被识别。
+- **被遮挡的窗口现在也能截**。默认 `CaptureBackend=auto`：目标窗口在前台时用 `CopyFromScreen`；被别的窗口盖住时改用 `PrintWindow(PW_RENDERFULLCONTENT)` 直接向窗口要画面，不再拍到盖住它的那个窗口。PrintWindow 对普通 GDI/DWM 窗口有效，个别 GPU 合成/DRM 保护的窗口会返回黑图，程序检测到整块同色会自动退回屏幕复制。需要强制时可在设置 →「抓屏方式」里切换。
+- **自动点击默认走「后台」通道**，不移动真实光标；但少数程序会忽略投递过去的消息（表现为点了没反应，观察窗会提示）。这时可切到「前台鼠标」，兼容性最好，并勾选「前台点击后把光标放回原处」。任何合成输入都可能被风控识别，本工具不承诺绕过反机器人检测。
 
 ## 托盘菜单
 
@@ -252,3 +275,7 @@ API Key **只存在本机** `%APPDATA%\DshShot\config.ini`，用 Windows DPAPI �
 
 右键托盘图标 → 退出，然后删掉本目录即可。
 如开过开机启动，先在菜单里取消。配置在 `%APPDATA%\DshShot\config.ini`。
+
+## 许可证
+
+[MIT](LICENSE)。第三方接口、模型和搜索服务按各自服务商条款使用。
