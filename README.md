@@ -15,6 +15,28 @@
 > 仓库里**不含**快捷方式文件，因为它内部存的是绝对路径；`install.cmd` 会按当前所在目录现算一份。
 > 想放到桌面：`install.cmd -Desktop`。
 
+### 下载后被拦住了？（智能应用控制 / SmartScreen）
+
+从浏览器下载的压缩包会被打上「来自 Internet」标记（Zone.Identifier），解压出来的 `.cmd` / `.vbs` 会继承它，Windows 的**智能应用控制**于是提示「具有危险文件扩展名的应用」并阻止运行。
+
+按顺序试，一般第 1 步就够：
+
+1. **删掉已解压的目录**，回到 ZIP 本身：右键 → 属性 → 底部勾选「**解除锁定**」→ 确定 → 重新解压。
+2. 已经解压了也行：进目录全选 → 右键 → 属性 → 勾选「解除锁定」。
+   或者用 PowerShell 一条命令（路径换成你的解压目录）：
+   ```powershell
+   Get-ChildItem "$env:USERPROFILE\Downloads\Viewfinder-main" -Recurse | Unblock-File
+   ```
+3. 仍被拦：「Windows 安全中心」→ 应用和浏览器控制 → 保护历史记录 → 找到这条 →「允许在设备上运行」。
+4. 想立刻用、不想折腾解封：打开 PowerShell，直接跑启动脚本（绕过被拦的 .cmd/.vbs）：
+   ```powershell
+   cd "你的解压目录"
+   powershell -NoProfile -STA -ExecutionPolicy Bypass -File .\launch.ps1
+   ```
+5. 最后手段：关闭智能应用控制（设置 → 隐私和安全性 → Windows 安全中心 → 应用和浏览器控制）。注意**关闭后除非重装系统否则无法再开启**，不建议为了这个工具这么做。
+
+确认成功的标志：双击 `install.cmd` 后，目录里出现 `DSH 取景器.lnk`，并弹出设置窗口。
+
 ## 启动
 
 - 双击 **`DSH 取景器.lnk`**（推荐，带图标，**不会闪命令行窗口**）
