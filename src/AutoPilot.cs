@@ -226,9 +226,10 @@ namespace DshShot
 
             Bitmap frame = null;
             Rectangle win;
+            bool fromScreen = true;
             try
             {
-                frame = Capture.Window(_hwnd, _cfg.CaptureBackend);
+                frame = Capture.Window(_hwnd, _cfg.CaptureBackend, out fromScreen);
                 win = Capture.WindowBounds(_hwnd);
             }
             catch (Exception ex)
@@ -250,7 +251,8 @@ namespace DshShot
                 return;
             }
             _failTicks = 0;
-            MaskStatus(frame, win);
+            // PrintWindow 拿到的是目标窗口自己的画面，不含本程序状态窗；只有屏幕复制才需要涂白
+            if (fromScreen) MaskStatus(frame, win);
 
             byte[] sig = Signature(frame);
             if (_tickCount <= 5)
@@ -1157,10 +1159,11 @@ namespace DshShot
             Bitmap now = null;
             try
             {
-                now = Capture.Window(_hwnd, _cfg.CaptureBackend);
+                bool fromScreen;
+                now = Capture.Window(_hwnd, _cfg.CaptureBackend, out fromScreen);
                 if (now == null) return false;
                 if (now.Width != win.Width || now.Height != win.Height) return false;
-                MaskStatus(now, win);   // 分析时观察窗被涂白，这里也要涂，否则永远判「画面变了」
+                if (fromScreen) MaskStatus(now, win);   // 与分析阶段保持一致，否则会误判「画面变了」
                 double diff = Similar(Signature(now), sigAtAnalysis);
                 if (diff >= 2.5) Log.Write("auto stillsame diff=" + diff.ToString("0.00"));
                 return diff < 2.5;

@@ -98,11 +98,19 @@ namespace DshShot
             return Window(hwnd, "auto");
         }
 
+        public static Bitmap Window(IntPtr hwnd, string backend)
+        {
+            bool fromScreen;
+            return Window(hwnd, backend, out fromScreen);
+        }
+
         // backend: auto / screen / printwindow
         // auto：前台窗口用屏幕复制；被别的窗口盖住时改用 PrintWindow（不需要 WGC）。
         // PrintWindow 对 GDI/DWM 窗口有效；个别 GPU 合成/DRM 窗口会返回黑图，此时自动退回屏幕复制。
-        public static Bitmap Window(IntPtr hwnd, string backend)
+        // fromScreen=true 表示是屏幕复制（会包含遮挡物/本程序状态窗），调用方据此决定是否要涂白状态窗。
+        public static Bitmap Window(IntPtr hwnd, string backend, out bool fromScreen)
         {
+            fromScreen = true;
             if (hwnd == IntPtr.Zero) return null;
             if (Native.IsIconic(hwnd)) return null;
             Rectangle r = WindowBounds(hwnd);
@@ -117,6 +125,7 @@ namespace DshShot
                 Bitmap shot = PrintWindowBitmap(hwnd, r);
                 if (shot != null)
                 {
+                    fromScreen = false;
                     Log.Write("capture printwindow " + r.Width + "x" + r.Height + " fg=" + foreground);
                     return shot;
                 }
@@ -158,8 +167,9 @@ namespace DshShot
         internal static bool LooksBlank(Bitmap bmp)
         {
             if (bmp == null || bmp.Width < 2 || bmp.Height < 2) return true;
-            int stepX = Math.Max(1, bmp.Width / 24);
-            int stepY = Math.Max(1, bmp.Height / 24);
+            // 采样密一点：一页只有一行小字的正常窗口不能被误判成「整块同色」
+            int stepX = Math.Max(1, bmp.Width / 160);
+            int stepY = Math.Max(1, bmp.Height / 160);
             int min = 765, max = 0;
             for (int y = 0; y < bmp.Height; y += stepY)
             {
