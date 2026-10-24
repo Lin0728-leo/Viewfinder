@@ -1,4 +1,4 @@
-﻿# Build DshShot.exe with the .NET Framework 4.x C# compiler (no SDK needed).
+# Build DshShot.exe with the .NET Framework 4.x C# compiler (no SDK needed).
 # Generates app.ico first, then compiles DshShot.cs.
 # Keep this file ASCII-only: Windows PowerShell 5.1 misreads BOM-less UTF-8.
 
@@ -145,10 +145,10 @@ $cscArgs = @(
     ('/win32icon:' + (Join-Path $PSScriptRoot 'app.ico')),
     ('/out:' + (Join-Path $PSScriptRoot 'DshShot.dll')),
     '/r:System.dll', '/r:System.Drawing.dll', '/r:System.Windows.Forms.dll', '/r:System.Web.Extensions.dll',
-    (Join-Path $PSScriptRoot 'DshShot.cs')
+    (Join-Path $PSScriptRoot 'src\DshShot.cs')
 )
 & $csc $cscArgs
 if ($LASTEXITCODE -ne 0) { throw "compile failed: $LASTEXITCODE" }
 
-$exe = Get-Item 'DshShot.dll'
+$exe = Get-Item (Join-Path $PSScriptRoot 'DshShot.dll')
 Write-Host ("exe : {0} ({1:N0} bytes)" -f $exe.FullName, $exe.Length)
