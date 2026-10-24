@@ -4851,6 +4851,7 @@ namespace DshShot
         private Label _tabApi, _tabAuto, _tabOther;
 
         private TextBox _baseUrl, _model, _key, _prompt, _shotsDir;
+        private string _keyMasked = "";
         private Label _testState;
         private NumericUpDown _interval, _idle, _maxClicks, _autoEdge, _autoQuality;
         private NumericUpDown _maxEdge, _quality, _maxShots;
@@ -4989,7 +4990,28 @@ namespace DshShot
             AddLabel(_paneApi, "模型名", 0, 46, 110);
             _model = AddText(_paneApi, _cfg.ApiModel, 118, 44, 394, false);
             AddLabel(_paneApi, "API Key", 0, 82, 110);
-            _key = AddText(_paneApi, _cfg.ApiKey, 118, 80, 394, true);
+            // 已有 Key 时只显示掩码：避免在截图、录屏、远程协助里被看到明文
+            _keyMasked = _cfg.ApiKey.Length > 0 ? ("已保存 " + MaskKey(_cfg.ApiKey) + "（点这里可换新的）") : "";
+            _key = AddText(_paneApi, _keyMasked, 118, 80, 330, false);
+            if (_keyMasked.Length > 0) _key.ForeColor = Muted;
+            _key.Enter += delegate
+            {
+                if (_key.Text == _keyMasked)
+                {
+                    _key.Text = "";
+                    _key.ForeColor = Ink;
+                    _key.PasswordChar = '●';
+                }
+            };
+
+            Button clearKey = MakeButton("清除", 456, 78, 56, false);
+            clearKey.Parent = _paneApi;
+            clearKey.Click += delegate
+            {
+                _key.Text = "";
+                _key.ForeColor = Ink;
+                _key.PasswordChar = '●';
+            };
 
             AddLabel(_paneApi, "回答风格（系统提示词）", 0, 118, 240);
             _prompt = AddText(_paneApi, _cfg.Prompt, 0, 142, 512, false);
@@ -5222,12 +5244,19 @@ namespace DshShot
             _hkClick.Text = "Ctrl+Alt+X"; _hkClick.Mods = 3; _hkClick.Vk = 88;
         }
 
+        private static string MaskKey(string k)
+        {
+            if (string.IsNullOrEmpty(k)) return "";
+            if (k.Length <= 8) return "****";
+            return k.Substring(0, 3) + "****" + k.Substring(k.Length - 4);
+        }
+
         private void TestConnection()
         {
             AppConfig probe = new AppConfig();
             probe.ApiBase = _baseUrl.Text.Trim();
             probe.ApiModel = _model.Text.Trim();
-            probe.ApiKey = _key.Text;
+            probe.ApiKey = (_key.Text == _keyMasked) ? _cfg.ApiKey : _key.Text.Trim();
             probe.Prompt = _prompt.Text;
 
             _testState.Text = "测试中…";
@@ -5265,7 +5294,8 @@ namespace DshShot
         {
             _cfg.ApiBase = _baseUrl.Text.Trim();
             _cfg.ApiModel = _model.Text.Trim();
-            _cfg.ApiKey = _key.Text;
+            // 显示掩码时表示没改过；真清空（点了「清除」）就存空
+            if (_key.Text != _keyMasked) _cfg.ApiKey = _key.Text.Trim();
             if (_prompt.Text.Trim().Length > 0) _cfg.Prompt = _prompt.Text;
 
             _cfg.AutoIntervalMs = (int)_interval.Value;

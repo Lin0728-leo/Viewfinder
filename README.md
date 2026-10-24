@@ -33,6 +33,7 @@
 
 API Key **只存在本机** `%APPDATA%\DshShot\config.ini`，用 Windows DPAPI 加密，仅当前用户可解。
 
+- 设置窗口里**只显示掩码**（sk-****abcd），点进输入框才会清空换成密码框；点「清除」可删掉已存的 Key
 - 仓库里没有任何配置文件：`.gitignore` 已排除 `config.ini` / `*.ini` / `*.key` / `*.env`
 - 下载别人的包也不含密钥，第一次运行要在设置里自己填
 - 换机器不会带过去，需要重新填一次
